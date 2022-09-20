@@ -62,7 +62,7 @@ public class StorageController: ControllerBase
     // Possibly make another controller just for the blob
     // Make api to post file to blob store possibly database. Param will be for a specifc container.
     [HttpPost("blob")]
-    public async Task<ActionResult> UploadObjectToBlob(List<IFormFile> files, string containerName)
+    public async Task<ActionResult> UploadObjectsToBlob(List<IFormFile> files, string containerName)
     {
         BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, containerName);
         long size = files.Sum(f => f.Length);
