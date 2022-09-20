@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs;
+using DMS.Models.Exceptions;
 
 namespace DMS.DataProviders;
 
@@ -94,23 +95,13 @@ public class AzureBlobService: IBlobService
         try 
         {
             BlobContainerClient containerClient = _blobServiceClient.GetBlobContainerClient(accountId);
-            
-            var blobs = containerClient.GetBlobs();
-
-            foreach(var blob in blobs)
-            {
-                if(blob.Name == fileName)
-                {
-                    BlobClient blobClient = containerClient.GetBlobClient(blob.Name);
-                    return await blobClient.DownloadContentAsync();
-                }
-            }
+            var blobClient = containerClient.GetBlobClient(fileName);
+            return await blobClient.DownloadContentAsync();
         }
         catch (Azure.RequestFailedException e)
         {
             Console.WriteLine(e.Message);
-            // TODO Should I do more than log the exception?
+            throw new KnownException(ErrorCategory.ResourceNotFound, ServiceErrorCode.File_NotFound, "blob not found");   
         }
-        return null;
     }
 }

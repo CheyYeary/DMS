@@ -60,5 +60,7 @@
         /// The user was not found.
         /// </summary>
         User_Exists = 1101,
+
+        File_NotFound = 1102,
     }
 }
