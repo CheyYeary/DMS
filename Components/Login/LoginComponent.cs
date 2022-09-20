@@ -1,4 +1,5 @@
 ﻿using DMS.Components.DeadManSwitch;
+using DMS.DataProviders.DataFactory;
 using DMS.DataProviders.Login;
 using DMS.Models;
 using DMS.Models.Exceptions;
@@ -11,12 +12,14 @@ namespace DMS.Components.Login
         private readonly ILogger logger;
         private readonly ILoginRepository loginRepository;
         private readonly IDeadManSwitchComponent deadManSwitch;
+        private readonly IDataFactoryService dataFactory;
 
-        public LoginComponent(ILogger<LoginComponent> logger, ILoginRepository loginRepository, IDeadManSwitchComponent deadManSwitch)
+        public LoginComponent(ILogger<LoginComponent> logger, ILoginRepository loginRepository, IDeadManSwitchComponent deadManSwitch, IDataFactoryService dataFactory)
         {
             this.logger = logger;
             this.loginRepository = loginRepository;
             this.deadManSwitch = deadManSwitch;
+            this.dataFactory = dataFactory;
         }
 
         /// <summary>
@@ -26,6 +29,8 @@ namespace DMS.Components.Login
         /// <returns></returns>
         public async Task<LoginResponseModel> Login(Guid accountId, CancellationToken cancellationToken)
         {
+            await this.dataFactory.CreateTrigger(cancellationToken);
+
             /*
              * 1. Get the user's login date
              * 2. If the user's login data is not found, create a new user
