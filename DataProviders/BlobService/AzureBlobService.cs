@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs;
 using DMS.Models.Exceptions;
+using Azure;
 
 namespace DMS.DataProviders;
 
@@ -45,14 +46,23 @@ public class AzureBlobService: IBlobService
     public async Task<List<Azure.Response<BlobContentInfo>>> UploadObjectsToBlob(List<IFormFile> files, string accountId)
     {
         BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, accountId);
-        long size = files.Sum(f => f.Length);
                         
         var filePaths = new List<string>();
-        List<Azure.Response<BlobContentInfo>> res = new List<Azure.Response<BlobContentInfo>>();
-        foreach (var FormFile in files){
-            res.Add(await containerClient.UploadBlobAsync(FormFile.FileName,FormFile.OpenReadStream()));
+        try 
+        {
+            List<Azure.Response<BlobContentInfo>> res = new List<Azure.Response<BlobContentInfo>>();
+            foreach (var FormFile in files){
+                res.Add(await containerClient.UploadBlobAsync(FormFile.FileName,FormFile.OpenReadStream()));
+            }
+            return res;
         }
-        return res;
+
+        // TODO Should be an internal Error 
+        catch (RequestFailedException ex) when (ex.ErrorCode == BlobErrorCode.ContainerBeingDeleted || ex.ErrorCode == BlobErrorCode.ContainerNotFound)
+        {
+
+            throw new KnownException(ErrorCategory.ServiceError, ServiceErrorCode.File_NotFound, "blobs not found");   
+        }
     }
 
     public async Task<List<string>> GetBlobsFromContainer(string accountId)
@@ -75,11 +85,9 @@ public class AzureBlobService: IBlobService
                 }
             }
         }
-        catch (Azure.RequestFailedException e)
+         catch (RequestFailedException ex) when (ex.ErrorCode == BlobErrorCode.ContainerBeingDeleted || ex.ErrorCode == BlobErrorCode.ContainerNotFound)
         {
-            Console.WriteLine(e.Message);
-            Console.ReadLine();
-            throw;
+            throw new KnownException(ErrorCategory.ServiceError, ServiceErrorCode.File_NotFound, "blobs not found");  
         }
         return blobItems;
     }
@@ -101,7 +109,7 @@ public class AzureBlobService: IBlobService
         catch (Azure.RequestFailedException e)
         {
             Console.WriteLine(e.Message);
-            throw new KnownException(ErrorCategory.ResourceNotFound, ServiceErrorCode.File_NotFound, "blob not found");   
+            throw new KnownException(ErrorCategory.ServiceError, ServiceErrorCode.File_NotFound, "blob not found");   
         }
     }
 }

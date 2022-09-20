@@ -15,21 +15,22 @@ public class StorageController: ControllerBase
         _blobService = blobService;
     }
 
+    // TODO Use login repo to check if they have an account before doing an action. Safegaurd. 
     [HttpPost("objects")]
-    public async Task<ActionResult> UploadObjectsToBlob(List<IFormFile> files, string accountId)
+    public async Task<ActionResult> UploadObjectsToBlob(List<IFormFile> files, [FromHeader] Guid accountId)
     {
-        return Ok(await _blobService.UploadObjectsToBlob(files, accountId));
+        return Ok(await _blobService.UploadObjectsToBlob(files, accountId.ToString()));
     }
 
     [HttpGet("objects")]
-    public async Task<ActionResult> GetBlobsFromContainer(string accountId){
-        return Ok(await _blobService.GetBlobsFromContainer(accountId));
+    public async Task<ActionResult> GetBlobsFromContainer([FromHeader] Guid accountId){
+        return Ok(await _blobService.GetBlobsFromContainer(accountId.ToString()));
     }
 
     [HttpGet("downloadObjects")]
-    public async Task<ActionResult> DownloadBlob(string fileName, string accountId)
+    public async Task<ActionResult> DownloadBlob(string fileName, [FromHeader] Guid accountId)
     {
-        var content = await _blobService.DownloadBlob(fileName, accountId);
+        var content = await _blobService.DownloadBlob(fileName, accountId.ToString());
         return File(content.Value.Content.ToArray(), "application/octet-stream", fileName);
     }
 }
