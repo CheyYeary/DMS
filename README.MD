@@ -14,7 +14,7 @@ body:
 {
   "deadManSwitchInterval": "00:01:10",
   "recurrence": {
-    "frequency": "Minute",
+    "frequency": "Year",
     "interval": 1,
     "startTime": "2022-09-20T22:15:31.897Z",
     "endTime": "2023-09-20T22:15:31.897Z",
