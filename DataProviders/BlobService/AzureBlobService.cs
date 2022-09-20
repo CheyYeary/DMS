@@ -30,20 +30,20 @@ public class AzureBlobService: IBlobService
             return containers;
         }
     // TODO : ACCOUNT ID IS EQUAL TO CONTAINER NAME
-    public async Task<Azure.Response<BlobContainerClient>> CreateContainer(string AccountId)
+    public async Task<Azure.Response<BlobContainerClient>> CreateContainer(string accountId)
     {
-        return await _blobServiceClient.CreateBlobContainerAsync(AccountId);
+        return await _blobServiceClient.CreateBlobContainerAsync(accountId);
     }
 
-    public async Task<Azure.Response> DeleteBlobContainer(string AccountId)
+    public async Task<Azure.Response> DeleteBlobContainer(string accountId)
     {
-        return await _blobServiceClient.DeleteBlobContainerAsync(AccountId);
+        return await _blobServiceClient.DeleteBlobContainerAsync(accountId);
         
     }
 
-    public async Task<List<Azure.Response<BlobContentInfo>>> UploadObjectsToBlob(List<IFormFile> files, string AccountId)
+    public async Task<List<Azure.Response<BlobContentInfo>>> UploadObjectsToBlob(List<IFormFile> files, string accountId)
     {
-        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, AccountId);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, accountId);
         long size = files.Sum(f => f.Length);
                         
         var filePaths = new List<string>();
@@ -54,9 +54,9 @@ public class AzureBlobService: IBlobService
         return res;
     }
 
-    public async Task<List<string>> GetBlobsFromContainer(string AccountId)
+    public async Task<List<string>> GetBlobsFromContainer(string accountId)
     {
-        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, AccountId);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, accountId);
         
         List<string> blobItems = new List<string>();
         try
@@ -72,8 +72,6 @@ public class AzureBlobService: IBlobService
                 {
                     blobItems.Add($"Blob name: { blobItem.Name}");
                 }
-
-                Console.WriteLine();
             }
         }
         catch (Azure.RequestFailedException e)
@@ -85,9 +83,34 @@ public class AzureBlobService: IBlobService
         return blobItems;
     }
 
-    public async Task<Azure.Response> DeleteObjectInBlob(string fileName, string AccountId)
+    public async Task<Azure.Response> DeleteObjectInBlob(string fileName, string accountId)
      {
-        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, AccountId);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, accountId);
         return await containerClient.DeleteBlobAsync(fileName);
+    }
+
+    public async Task<Azure.Response<BlobDownloadResult>> DownloadBlob(string fileName, string accountId)
+    {
+        try 
+        {
+            BlobContainerClient containerClient = _blobServiceClient.GetBlobContainerClient(accountId);
+            
+            var blobs = containerClient.GetBlobs();
+
+            foreach(var blob in blobs)
+            {
+                if(blob.Name == fileName)
+                {
+                    BlobClient blobClient = containerClient.GetBlobClient(blob.Name);
+                    return await blobClient.DownloadContentAsync();
+                }
+            }
+        }
+        catch (Azure.RequestFailedException e)
+        {
+            Console.WriteLine(e.Message);
+            // TODO Should I do more than log the exception?
+        }
+        return null;
     }
 }

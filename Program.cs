@@ -1,6 +1,7 @@
 using DMS.Components.DeadManSwitch;
 using DMS.Components.Login;
 using DMS.Configurations;
+using DMS.DataProviders;
 using DMS.DataProviders.DataFactory;
 using DMS.DataProviders.Login;
 using DMS.Logging;
@@ -26,6 +27,7 @@ builder.Services.AddScoped<ILoginComponent, LoginComponent>();
 // repositories
 builder.Services.AddSingleton<ILoginRepository, LoginRepository>();
 builder.Services.AddSingleton<IDataFactoryService, DataFactoryService>();
+builder.Services.AddSingleton<IBlobService, AzureBlobService>();
 
 var app = builder.Build();
 
