@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using System.IO;
 
 namespace dead_switch_api.Controllers;
 
@@ -9,14 +8,17 @@ namespace dead_switch_api.Controllers;
 [Route("api/storage")]
 public class StorageController: ControllerBase
 {
-    const string AZURE_STORAGE_CONNECTION_STRING = "";
-    BlobServiceClient blobServiceClient = new BlobServiceClient(AZURE_STORAGE_CONNECTION_STRING);
+    private string _azure_storage_connection_string = string.Empty;
+    private readonly BlobServiceClient _blobServiceClient;
+    
     // private readonly ObjectDataStore _objectDataStore;
 
-    // public StorageController(ObjectDataStore objectDataStore)
-    // {
+    public StorageController(IConfiguration configuration)
+    {
+        _azure_storage_connection_string = configuration["ConnectionStrings:dev"];
     //    _objectDataStore = objectDataStore ?? throw new ArgumentNullException(nameof(objectDataStore));
-    // }
+       _blobServiceClient = new BlobServiceClient(_azure_storage_connection_string);
+    }
     
 
     [HttpGet("containers")]
@@ -25,7 +27,7 @@ public class StorageController: ControllerBase
         List<string> containers = new List<string>();
         Console.WriteLine("Azure Blob Storage v12 - .NET quickstart sample\n");
         // Create a BlobServiceClient object which will be used to create a container client
-        var results = blobServiceClient.GetBlobContainersAsync().AsPages();
+        var results = _blobServiceClient.GetBlobContainersAsync().AsPages();
         await foreach (Azure.Page<BlobContainerItem> containerPage in results)
         {
             foreach (BlobContainerItem containerItem in containerPage.Values)
@@ -44,7 +46,7 @@ public class StorageController: ControllerBase
         string containerName = "quickstartblobs" + Guid.NewGuid().ToString();
 
         // Create the container and return a container client object
-        BlobContainerClient containerClient = await blobServiceClient.CreateBlobContainerAsync(containerName);
+        BlobContainerClient containerClient = await _blobServiceClient.CreateBlobContainerAsync(containerName);
         return Ok();
     }
 
@@ -52,7 +54,7 @@ public class StorageController: ControllerBase
     public ActionResult DeleteBlobContainer(string containerName)
     {
         Console.WriteLine("Delete Blob");
-        var res = blobServiceClient.DeleteBlobContainer(containerName);
+        var res = _blobServiceClient.DeleteBlobContainer(containerName);
         // deleting does not immeditately delete the container. The above gets back a 202 which is accepted but not processed.
         return Ok();
     }
@@ -62,7 +64,7 @@ public class StorageController: ControllerBase
     [HttpPost("blob")]
     public async Task<ActionResult> UploadObjectToBlob(List<IFormFile> files, string containerName)
     {
-        BlobContainerClient containerClient = new BlobContainerClient(AZURE_STORAGE_CONNECTION_STRING, containerName);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, containerName);
         long size = files.Sum(f => f.Length);
                         
         var filePaths = new List<string>();
@@ -77,7 +79,7 @@ public class StorageController: ControllerBase
 
     [HttpGet("blobs")]
     public async Task<ActionResult> GetBlobsFromContainer(string containerName){
-        BlobContainerClient containerClient = new BlobContainerClient(AZURE_STORAGE_CONNECTION_STRING, containerName);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, containerName);
         
         List<string> blobItems = new List<string>();
         try
@@ -109,7 +111,7 @@ public class StorageController: ControllerBase
     [HttpDelete("deleteblob")]
     public async Task<IActionResult> DeleteObjectInBlob(string fileName, string containerName)
     {
-        BlobContainerClient containerClient = new BlobContainerClient(AZURE_STORAGE_CONNECTION_STRING, containerName);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, containerName);
         var res = await containerClient.DeleteBlobAsync(fileName);
         return Ok();
     }
@@ -119,7 +121,7 @@ public class StorageController: ControllerBase
     {
         try 
         {
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+            BlobContainerClient containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             
             var blobs = containerClient.GetBlobs();
 
