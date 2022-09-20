@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.Azure.Management.DataFactory.Models;
+using System.ComponentModel;
 
 namespace DMS.Models
 {
@@ -14,6 +15,6 @@ namespace DMS.Models
         [ReadOnly(true)]
         public DateTime LastModifiedAt { get; set; }
 
-        public TimeSpan DeadManSwitchInterval { get; init; }
+        public ScheduleTriggerRecurrence Recurrence { get; init; }
     }
 }

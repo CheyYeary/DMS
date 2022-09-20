@@ -3,6 +3,7 @@ using Microsoft.Azure.Management.DataFactory;
 using Microsoft.Azure.Management.DataFactory.Models;
 using Microsoft.Identity.Client;
 using Microsoft.Rest;
+using Microsoft.Rest.Azure;
 using LogLevel = Microsoft.Identity.Client.LogLevel;
 
 namespace DMS.DataProviders.DataFactory
@@ -46,11 +47,11 @@ namespace DMS.DataProviders.DataFactory
                 SubscriptionId = configuration.SubscriptionId
             };
         }
-        
-        public async Task CreateTrigger(CancellationToken cancellationToken)
+
+        /// <inheritdoc/>
+        public async Task CreateTrigger(string triggerName, ScheduleTriggerRecurrence recurrence, CancellationToken cancellationToken)
         {
             string pipelineName = "DeadManSwitchPipeline";
-            string triggerName = "test";
 
             // Create the trigger
             this.logger.LogInformation("Creating the trigger");
@@ -79,23 +80,25 @@ namespace DMS.DataProviders.DataFactory
                             Parameters = pipelineParameters,
                         }
                     },
-                    Recurrence = new ScheduleTriggerRecurrence()
-                    {
-                        // Set the start time to the current UTC time and the end time to one hour after the start time
-                        StartTime = startTime,
-                        TimeZone = "UTC",
-                        EndTime = startTime.AddHours(1),
-                        Frequency = RecurrenceFrequency.Minute,
-                        Interval = 15,
-                    }
+                    Recurrence = recurrence
                 }
             };
-            // Now, create the trigger by invoking the CreateOrUpdate method
-            await client.Triggers.CreateOrUpdateAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, triggerResource, cancellationToken: cancellationToken);
 
-            // Start the trigger
-            this.logger.LogInformation("Starting the trigger");
-            await client.Triggers.StartAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, cancellationToken);
+            try
+            {
+                // Now, create the trigger by invoking the CreateOrUpdate method
+                await client.Triggers.CreateOrUpdateAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, triggerResource, cancellationToken: cancellationToken);
+
+                // Start the trigger
+                this.logger.LogInformation("Starting the trigger");
+                await client.Triggers.StartAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, cancellationToken);
+            }
+            catch (CloudException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                await this.DisableTrigger(triggerName, cancellationToken);
+                // try again
+                await this.CreateTrigger(triggerName, recurrence, cancellationToken);
+            }
         }
 
         private void LogCallback(
@@ -115,6 +118,18 @@ namespace DMS.DataProviders.DataFactory
                     // Do not log verbose or info
                     break;
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task DisableTrigger(string triggerName, CancellationToken cancellationToken)
+        {
+            await client.Triggers.StopAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<TriggerResource> GetTrigger(string triggerName, CancellationToken cancellationToken)
+        {
+            return await client.Triggers.GetAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, cancellationToken: cancellationToken);
         }
     }
 }
