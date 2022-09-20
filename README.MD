@@ -12,7 +12,6 @@ F9168C5E-CEB2-4faa-B6BF-329BF39FA1E4
 
 body:
 {
-  "deadManSwitchInterval": "00:01:10",
   "recurrence": {
     "frequency": "Year",
     "interval": 1,
