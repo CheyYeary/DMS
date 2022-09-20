@@ -1,5 +1,16 @@
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Threading;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using System.Net;
+using Azure;
+using System.ComponentModel;
+using System.Reflection.Metadata;
 
 namespace DMS.DataProviders;
 
@@ -7,6 +18,22 @@ public class AzureBlobService: IBlobService
 {
     private string _azure_storage_connection_string = string.Empty;
     private readonly BlobServiceClient _blobServiceClient;
+    private static readonly JsonSerializer Serializer;
+
+    static AzureBlobService()
+    {
+        Serializer = JsonSerializer.Create(new JsonSerializerSettings
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+            DateTimeZoneHandling = DateTimeZoneHandling.Utc,
+            Converters = new List<JsonConverter>
+            {
+                new IsoDateTimeConverter(),
+                new StringEnumConverter { CamelCaseText = true }
+            }
+        });
+    }
+
     public AzureBlobService(IConfiguration configuration)
     {
         _azure_storage_connection_string = configuration["ConnectionStrings:dev"];
@@ -29,34 +56,66 @@ public class AzureBlobService: IBlobService
             }
             return containers;
         }
-    // TODO : ACCOUNT ID IS EQUAL TO CONTAINER NAME
-    public async Task<Azure.Response<BlobContainerClient>> CreateContainer(string AccountId)
+    public async Task<Response<BlobContainerClient>> CreateContainer(string accountId)
     {
-        return await _blobServiceClient.CreateBlobContainerAsync(AccountId);
+        return await _blobServiceClient.CreateBlobContainerAsync(accountId);
     }
 
-    public async Task<Azure.Response> DeleteBlobContainer(string AccountId)
+    public async Task<Response> DeleteBlobContainer(string AccountId)
     {
         return await _blobServiceClient.DeleteBlobContainerAsync(AccountId);
-        
     }
 
-    public async Task<List<Azure.Response<BlobContentInfo>>> UploadObjectsToBlob(List<IFormFile> files, string AccountId)
+    public async Task<T> UploadObjectToBlob<T>(string blobName, string accountId, T value, CancellationToken cancellationToken)
     {
-        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, AccountId);
-        long size = files.Sum(f => f.Length);
-                        
-        var filePaths = new List<string>();
-        List<Azure.Response<BlobContentInfo>> res = new List<Azure.Response<BlobContentInfo>>();
-        foreach (var FormFile in files){
-            res.Add(await containerClient.UploadBlobAsync(FormFile.FileName,FormFile.OpenReadStream()));
+        BlobContainerClient containerClient = new(_azure_storage_connection_string, accountId);
+
+        BlobClient blobClient = containerClient.GetBlobClient(blobName);
+        using MemoryStream memStream = new();
+        using (StreamWriter streamWriter = new(memStream, leaveOpen: true))
+        using (JsonTextWriter jsonWriter = new(streamWriter) { CloseOutput = false })
+        {
+            Serializer.Serialize(jsonWriter, value);
         }
-        return res;
+
+        memStream.Seek(0, SeekOrigin.Begin);
+
+        await blobClient.UploadAsync(memStream, overwrite: true, cancellationToken);
+
+        memStream.Seek(0, SeekOrigin.Begin);
+        using StreamReader textReader = new(memStream, leaveOpen: true);
+        using JsonTextReader jsonReader = new(textReader) { CloseInput = false };
+        
+        return Serializer.Deserialize<T>(jsonReader);
     }
 
-    public async Task<List<string>> GetBlobsFromContainer(string AccountId)
+
+    public async Task<T> DownloadBlobAsync<T>(string blobName, string accountId, CancellationToken cancellationToken)
     {
-        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, AccountId);
+        BlobContainerClient containerClient = new(_azure_storage_connection_string, accountId);
+        using MemoryStream memStream = new();
+        try
+        {
+            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            await blobClient.DownloadToAsync(memStream, cancellationToken);
+        }
+        catch (RequestFailedException ex) when (ex.ErrorCode == BlobErrorCode.ContainerBeingDeleted || ex.ErrorCode == BlobErrorCode.ContainerNotFound)
+        {
+            // Ignore any errors if the container being deleted or if it has already been deleted
+            return default;
+        }
+
+        memStream.Seek(0, SeekOrigin.Begin);
+        using StreamReader textReader = new(memStream, leaveOpen: true);
+        using JsonTextReader jsonReader = new(textReader) { CloseInput = false };
+        var entity = Serializer.Deserialize<T>(jsonReader);
+
+        return entity;
+    }
+    
+    public async Task<List<string>> GetBlobsFromContainer(string accountId)
+    {
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, accountId);
         
         List<string> blobItems = new List<string>();
         try
@@ -85,9 +144,9 @@ public class AzureBlobService: IBlobService
         return blobItems;
     }
 
-    public async Task<Azure.Response> DeleteObjectInBlob(string fileName, string AccountId)
+    public async Task<Response> DeleteObjectInBlob(string fileName, string accountId)
      {
-        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, AccountId);
+        BlobContainerClient containerClient = new BlobContainerClient(_azure_storage_connection_string, accountId);
         return await containerClient.DeleteBlobAsync(fileName);
     }
 }
