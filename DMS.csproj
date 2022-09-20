@@ -10,9 +10,11 @@
   <ItemGroup>
     <PackageReference Include="azure.storage.blobs" Version="12.13.1" />
     <PackageReference Include="microsoft.aspnetcore.authentication.jwtbearer" Version="6.0.8" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.47.0" />
     <PackageReference Include="microsoft.identitymodel.tokens" Version="6.23.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
     <PackageReference Include="system.identitymodel.tokens.jwt" Version="6.23.1" />
+    <PackageReference Include="Microsoft.Azure.Management.DataFactory" Version="6.4.0" />
   </ItemGroup>
 
 </Project>

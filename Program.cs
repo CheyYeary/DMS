@@ -1,6 +1,7 @@
 using DMS.Components.DeadManSwitch;
 using DMS.Components.Login;
 using DMS.Configurations;
+using DMS.DataProviders.DataFactory;
 using DMS.DataProviders.Login;
 using DMS.Logging;
 using DMS.Middleware;
@@ -18,11 +19,13 @@ builder.Services.AddSingleton<ILogger, ConsoleJsonLogger>();
 
 // configurations
 builder.Services.AddSingleton<IEnvironmentConfig, EnvironmentConfig>();
+builder.Services.AddSingleton<IDataFactoryConfig, DataFactoryConfig>();
 // components
 builder.Services.AddScoped<IDeadManSwitchComponent, DeadManSwitchComponent>();
 builder.Services.AddScoped<ILoginComponent, LoginComponent>();
 // repositories
 builder.Services.AddSingleton<ILoginRepository, LoginRepository>();
+builder.Services.AddSingleton<IDataFactoryService, DataFactoryService>();
 
 var app = builder.Build();
 
@@ -42,5 +45,10 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Async operations should not run in constructors invoked by dependency injection; they can lead to a deadlock, see this article
+// https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines
+var dataFactoryService = app.Services.GetRequiredService<IDataFactoryService>();
+await dataFactoryService.Initialize();
 
 await app.RunAsync();
