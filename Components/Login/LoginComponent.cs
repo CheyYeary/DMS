@@ -1,7 +1,7 @@
 ﻿using DMS.Components.DeadManSwitch;
 using DMS.DataProviders.Login;
 using DMS.Models;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using DMS.Models.Exceptions;
 
 namespace DMS.Components.Login
 {
@@ -41,7 +41,7 @@ namespace DMS.Components.Login
             if (existingLogin == null)
             {
                 // TODO: return a 404 error code
-                throw new Exception("User not found");   
+                throw new KnownException(ErrorCategory.ResourceNotFound, ServiceErrorCode.User_NotFound, "User not found");   
             }
             // If the users's most recent login is before now minus the threshold, then flip the dead man switch 
             else if (DateTime.Compare(existingLogin.LastModifiedAt, currentTime - existingLogin.DeadManSwitchInterval) < 0)
@@ -70,7 +70,7 @@ namespace DMS.Components.Login
             if (existingLogin != null)
             {
                 // TODO: return a 409 error code
-                throw new Exception("User already exists");
+                throw new KnownException(ErrorCategory.Conflict, ServiceErrorCode.User_Exists, "User already exists");
             }
 
             DateTime currentTime = DateTime.UtcNow;
