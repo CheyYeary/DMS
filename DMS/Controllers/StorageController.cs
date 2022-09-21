@@ -15,7 +15,7 @@ public class StorageController: ControllerBase
 
     public StorageController(IConfiguration configuration)
     {
-        _azure_storage_connection_string = configuration["ConnectionStrings:dev"];
+        _azure_storage_connection_string = Environment.GetEnvironmentVariable("ConnectionString") ?? configuration["ConnectionStrings:dev"] ?? throw new ArgumentNullException("ConnectionString");
     //    _objectDataStore = objectDataStore ?? throw new ArgumentNullException(nameof(objectDataStore));
        _blobServiceClient = new BlobServiceClient(_azure_storage_connection_string);
     }

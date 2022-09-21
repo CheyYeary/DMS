@@ -2,6 +2,6 @@
 {
     public interface IDeadManSwitchComponent
     {
-        Task Send(CancellationToken cancellationToken);
+        Task Send(Guid accountId, CancellationToken cancellationToken);
     }
 }

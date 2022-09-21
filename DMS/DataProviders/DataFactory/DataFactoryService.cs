@@ -26,33 +26,41 @@ namespace DMS.DataProviders.DataFactory
         {
             if (this.client != null)
             {
-                throw new InvalidOperationException("Data factory already initialized");
+                return;
             }
 
-            // Authenticate and create a data factory management client  
-            IConfidentialClientApplication app = ConfidentialClientApplicationBuilder
-                .Create(this.configuration.ClientId)
-                .WithAuthority(new Uri(this.configuration.Authority))
-                .WithLogging(LogCallback)
-                .WithClientSecret(configuration.AuthenticationKey)
-                .WithLegacyCacheCompatibility(false)
-                .WithCacheOptions(CacheOptions.EnableSharedCacheOptions)
-                .Build();
-
-            AuthenticationResult result = await app.AcquireTokenForClient(this.scopes)
-            .ExecuteAsync();
-            ServiceClientCredentials cred = new TokenCredentials(result.AccessToken);
-            this.client = new DataFactoryManagementClient(cred)
+            try
             {
-                SubscriptionId = configuration.SubscriptionId
-            };
+                // Authenticate and create a data factory management client  
+                IConfidentialClientApplication app = ConfidentialClientApplicationBuilder
+                    .Create(this.configuration.ClientId)
+                    .WithAuthority(new Uri(this.configuration.Authority))
+                    .WithLogging(LogCallback)
+                    .WithClientSecret(configuration.AuthenticationKey)
+                    .WithLegacyCacheCompatibility(false)
+                    .WithCacheOptions(CacheOptions.EnableSharedCacheOptions)
+                    .Build();
+
+                AuthenticationResult result = await app.AcquireTokenForClient(this.scopes)
+                .ExecuteAsync();
+                ServiceClientCredentials cred = new TokenCredentials(result.AccessToken);
+                this.client = new DataFactoryManagementClient(cred)
+                {
+                    SubscriptionId = configuration.SubscriptionId
+                };
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Failed to initialize data factory service");
+                throw;
+            }
+
+           
         }
 
         /// <inheritdoc/>
-        public async Task CreateTrigger(string triggerName, ScheduleTriggerRecurrence recurrence, CancellationToken cancellationToken)
+        public async Task CreateTrigger(Guid accountId, string triggerName, ScheduleTriggerRecurrence recurrence, CancellationToken cancellationToken)
         {
-            string pipelineName = "DeadManSwitchPipeline";
-
             // Create the trigger
             this.logger.LogInformation("Creating the trigger");
 
@@ -76,7 +84,7 @@ namespace DMS.DataProviders.DataFactory
                         // Associate the Adfv2QuickStartPipeline pipeline with the trigger
                         new TriggerPipelineReference()
                         {
-                            PipelineReference = new PipelineReference(pipelineName),
+                            PipelineReference = new PipelineReference(GetPipelineName(accountId)),
                             Parameters = pipelineParameters,
                         }
                     },
@@ -97,7 +105,7 @@ namespace DMS.DataProviders.DataFactory
             {
                 await this.DisableTrigger(triggerName, cancellationToken);
                 // try again
-                await this.CreateTrigger(triggerName, recurrence, cancellationToken);
+                await this.CreateTrigger(accountId, triggerName, recurrence, cancellationToken);
             }
         }
 
@@ -131,5 +139,34 @@ namespace DMS.DataProviders.DataFactory
         {
             return await client.Triggers.GetAsync(configuration.ResourceGroup, configuration.DataFactoryName, triggerName, cancellationToken: cancellationToken);
         }
+
+        public async Task<PipelineResource> CreatePipeline(Guid accountId, CancellationToken cancellationToken)
+        {
+            // Create the trigger
+            this.logger.LogInformation("Creating the pipeline");
+            string pipelineName = GetPipelineName(accountId);
+            PipelineResource pipeline = new(name: pipelineName, type: "AzureFunctionActivity", activities: new List<Activity>()
+            {
+                new AzureFunctionActivity{
+                    Name = "AzureFunctionActivity",
+                    FunctionName = "DeadManSwitchFunction",
+                    Headers = new Dictionary<string, string>()
+                    {
+                        ["accountId"] = accountId.ToString()
+                    },
+                    Method = HttpMethod.Get.ToString(),
+                    LinkedServiceName = new LinkedServiceReference()
+                    {
+                        ReferenceName = "DeadManSwitchFunction",
+                    }
+                }
+            });
+            
+            // Now, create the trigger by invoking the CreateOrUpdate method
+            return await client.Pipelines.CreateOrUpdateAsync(configuration.ResourceGroup, configuration.DataFactoryName, pipelineName, pipeline, cancellationToken: cancellationToken);
+        }
+
+        private static string GetPipelineName(Guid accountId) => $"DeadManSwitchPipeline_{accountId}";
+
     }
 }
