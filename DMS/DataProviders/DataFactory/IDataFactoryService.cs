@@ -6,10 +6,12 @@ namespace DMS.DataProviders.DataFactory
     {
         Task Initialize();
 
-        Task CreateTrigger(string triggerName, ScheduleTriggerRecurrence recurrence, CancellationToken cancellationToken);
+        Task CreateTrigger(Guid accountId, string triggerName, ScheduleTriggerRecurrence recurrence, CancellationToken cancellationToken);
 
         Task DisableTrigger(string triggerName, CancellationToken cancellationToken);
 
         Task<TriggerResource> GetTrigger(string triggerName, CancellationToken cancellationToken);
+
+        Task<PipelineResource> CreatePipeline(Guid accountId, CancellationToken cancellationToken);
     }
 }

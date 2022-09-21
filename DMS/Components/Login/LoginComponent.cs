@@ -48,7 +48,7 @@ namespace DMS.Components.Login
 
             string triggerName = GetTriggerName(accountId);
             await this.dataFactory.GetTrigger(triggerName, cancellationToken);
-            await this.dataFactory.CreateTrigger(triggerName, existingLogin.Recurrence, cancellationToken);
+            await this.dataFactory.CreateTrigger(accountId, triggerName, existingLogin.Recurrence, cancellationToken);
 
             return await loginRepository.AddOrUpdateLogin(existingLogin, cancellationToken);
         }
@@ -66,8 +66,10 @@ namespace DMS.Components.Login
                 // TODO: return a 409 error code
                 throw new KnownException(ErrorCategory.Conflict, ServiceErrorCode.User_Exists, "User already exists");
             }
+
+            await this.dataFactory.CreatePipeline(accountId, cancellationToken);
             string triggerName = GetTriggerName(accountId);
-            await this.dataFactory.CreateTrigger(triggerName, signUp.Recurrence, cancellationToken);
+            await this.dataFactory.CreateTrigger(accountId, triggerName, signUp.Recurrence, cancellationToken);
 
             DateTime currentTime = DateTime.UtcNow;
             return await loginRepository.AddOrUpdateLogin(new()
