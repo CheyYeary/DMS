@@ -36,7 +36,7 @@ public class AzureBlobService: IBlobService
 
     public AzureBlobService(IConfiguration configuration)
     {
-        _azure_storage_connection_string = configuration["ConnectionStrings:dev"];
+        _azure_storage_connection_string = Environment.GetEnvironmentVariable("ConnectionString") ?? configuration["ConnectionStrings:dev"] ?? throw new ArgumentNullException("ConnectionString");
         _blobServiceClient = new BlobServiceClient(_azure_storage_connection_string);
     }
 
