@@ -1,9 +1,7 @@
-﻿using DMS.Components.DeadManSwitch;
-using DMS.DataProviders.DataFactory;
+﻿using DMS.DataProviders.DataFactory;
 using DMS.DataProviders.Login;
 using DMS.Models;
 using DMS.Models.Exceptions;
-using Microsoft.Azure.Management.DataFactory.Models;
 
 namespace DMS.Components.Login
 {
@@ -12,14 +10,12 @@ namespace DMS.Components.Login
         // TODO: make this a config option for when user creates account
         private readonly ILogger logger;
         private readonly ILoginRepository loginRepository;
-        private readonly IDeadManSwitchComponent deadManSwitch;
         private readonly IDataFactoryService dataFactory;
 
-        public LoginComponent(ILogger<LoginComponent> logger, ILoginRepository loginRepository, IDeadManSwitchComponent deadManSwitch, IDataFactoryService dataFactory)
+        public LoginComponent(ILogger<LoginComponent> logger, ILoginRepository loginRepository, IDataFactoryService dataFactory)
         {
             this.logger = logger;
             this.loginRepository = loginRepository;
-            this.deadManSwitch = deadManSwitch;
             this.dataFactory = dataFactory;
         }
 
@@ -83,60 +79,6 @@ namespace DMS.Components.Login
             }, cancellationToken);
         }
 
-        // todo move this to the callback flow
-        private async Task TestAsync(Guid accountId, CancellationToken cancellationToken)
-        {
-            LoginKey key = new()
-            {
-                AccountId = accountId
-            };
-            DateTime currentTime = DateTime.UtcNow;
-
-            LoginResponseModel? existingLogin = await loginRepository.GetLoginModel(key, cancellationToken);
-            // If the users's most recent login is before now minus the threshold, then flip the dead man switch
-            TimeSpan deadManSwitchInterval = GetInterval(existingLogin.Recurrence.Frequency, existingLogin.Recurrence.Interval ?? 1);
-            if (DateTime.Compare(existingLogin.LastModifiedAt, currentTime - deadManSwitchInterval) < 0)
-            {
-                string message = "You did not login in time. Flipping the switch";
-                logger.LogWarning(message);
-
-                await this.deadManSwitch.Send(cancellationToken);
-                // logging into an account that is past the deadline should result in what status code?
-                throw new Exception(message);
-            }
-        }
-
         private static string GetTriggerName(Guid accountId) => $"{accountId}_DeadManSwitchTrigger";
-
-        private static TimeSpan GetInterval(string frequency, int interval)
-        {
-            TimeSpan deadManSwitchInterval;
-            if (frequency.Equals(RecurrenceFrequency.Minute, StringComparison.OrdinalIgnoreCase))
-            {
-                deadManSwitchInterval = TimeSpan.FromMinutes(interval);
-            }
-            else if (frequency.Equals(RecurrenceFrequency.Hour, StringComparison.OrdinalIgnoreCase))
-            {
-                deadManSwitchInterval = TimeSpan.FromHours(interval);
-            }
-            else if (frequency.Equals(RecurrenceFrequency.Day, StringComparison.OrdinalIgnoreCase))
-            {
-                deadManSwitchInterval = TimeSpan.FromDays(interval);
-            }
-            else if (frequency.Equals(RecurrenceFrequency.Month, StringComparison.OrdinalIgnoreCase))
-            {
-                deadManSwitchInterval = TimeSpan.FromDays(30 * interval);
-            }
-            else if (frequency.Equals(RecurrenceFrequency.Year, StringComparison.OrdinalIgnoreCase))
-            {
-                deadManSwitchInterval = TimeSpan.FromDays(365 * interval);
-            }
-            else
-            {
-                deadManSwitchInterval = TimeSpan.FromDays(interval * 365);
-            }
-
-            return deadManSwitchInterval;
-        }
     }
 }

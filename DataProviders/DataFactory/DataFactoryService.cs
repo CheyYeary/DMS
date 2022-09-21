@@ -26,26 +26,36 @@ namespace DMS.DataProviders.DataFactory
         {
             if (this.client != null)
             {
-                throw new InvalidOperationException("Data factory already initialized");
+                return;
             }
 
-            // Authenticate and create a data factory management client  
-            IConfidentialClientApplication app = ConfidentialClientApplicationBuilder
-                .Create(this.configuration.ClientId)
-                .WithAuthority(new Uri(this.configuration.Authority))
-                .WithLogging(LogCallback)
-                .WithClientSecret(configuration.AuthenticationKey)
-                .WithLegacyCacheCompatibility(false)
-                .WithCacheOptions(CacheOptions.EnableSharedCacheOptions)
-                .Build();
-
-            AuthenticationResult result = await app.AcquireTokenForClient(this.scopes)
-            .ExecuteAsync();
-            ServiceClientCredentials cred = new TokenCredentials(result.AccessToken);
-            this.client = new DataFactoryManagementClient(cred)
+            try
             {
-                SubscriptionId = configuration.SubscriptionId
-            };
+                // Authenticate and create a data factory management client  
+                IConfidentialClientApplication app = ConfidentialClientApplicationBuilder
+                    .Create(this.configuration.ClientId)
+                    .WithAuthority(new Uri(this.configuration.Authority))
+                    .WithLogging(LogCallback)
+                    .WithClientSecret(configuration.AuthenticationKey)
+                    .WithLegacyCacheCompatibility(false)
+                    .WithCacheOptions(CacheOptions.EnableSharedCacheOptions)
+                    .Build();
+
+                AuthenticationResult result = await app.AcquireTokenForClient(this.scopes)
+                .ExecuteAsync();
+                ServiceClientCredentials cred = new TokenCredentials(result.AccessToken);
+                this.client = new DataFactoryManagementClient(cred)
+                {
+                    SubscriptionId = configuration.SubscriptionId
+                };
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "Failed to initialize data factory service");
+                throw;
+            }
+
+           
         }
 
         /// <inheritdoc/>

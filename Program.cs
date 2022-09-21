@@ -1,33 +1,20 @@
-using DMS.Components.DeadManSwitch;
-using DMS.Components.Login;
+using DMS;
 using DMS.Configurations;
-using DMS.DataProviders;
 using DMS.DataProviders.DataFactory;
-using DMS.DataProviders.Login;
-using DMS.Logging;
 using DMS.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddLogging();
-builder.Services.AddSingleton<ILogger, ConsoleJsonLogger>();
+builder
+    .Services
+    .AddConfig()
+    .AddLoggers()
+    .AddComponents()
+    .AddSwagger();
 
-// configurations
-builder.Services.AddSingleton<IEnvironmentConfig, EnvironmentConfig>();
-builder.Services.AddSingleton<IDataFactoryConfig, DataFactoryConfig>();
-// components
-builder.Services.AddScoped<IDeadManSwitchComponent, DeadManSwitchComponent>();
-builder.Services.AddScoped<ILoginComponent, LoginComponent>();
-// repositories
-builder.Services.AddSingleton<IBlobService, AzureBlobService>();
-builder.Services.AddSingleton<ILoginRepository, LoginRepository>();
-builder.Services.AddSingleton<IDataFactoryService, DataFactoryService>();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
