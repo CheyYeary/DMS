@@ -1,7 +1,11 @@
 ﻿using DMS.DataProviders.Login;
 using DMS.Models;
 using DMS.Models.Exceptions;
+using FluentEmail.Smtp;
+using FluentEmail.Core;
 using Microsoft.Azure.Management.DataFactory.Models;
+using System.Net.Mail;
+using FluentEmail.Core.Models;
 
 namespace DMS.Components.DeadManSwitch
 {
@@ -34,9 +38,43 @@ namespace DMS.Components.DeadManSwitch
             TimeSpan deadManSwitchInterval = GetInterval(existingLogin.Recurrence.Frequency, existingLogin.Recurrence.Interval ?? 1);
             if (DateTime.Compare(existingLogin.LastModifiedAt, currentTime - deadManSwitchInterval) < 0)
             {
-                string message = "You did not login in time. Flipping the switch";
+                string message = $"{existingLogin.AccountId}: Did not login in time. Flipping the switch";
                 logger.LogWarning(message);
+                await this.SendEmailAsync();
             }
+        }
+
+        private async Task<bool> SendEmailAsync()
+        {
+            SmtpClient smtp = new SmtpClient("smtp-mail.outlook.com");
+
+            var _sender = "deadmanswitchhackathon@outlook.com";
+            var _password = "";
+
+
+            System.Net.NetworkCredential creds = new System.Net.NetworkCredential(_sender, _password);
+            smtp.Port = 587;
+            smtp.EnableSsl = true;
+            smtp.UseDefaultCredentials = false;
+            smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+            smtp.Credentials = creds;
+
+
+            var sender = new SmtpSender(smtp);
+            var time = DateTime.Now.ToString("yyyyMMddHHmmss");
+            Email.DefaultSender = sender;
+
+            SendResponse email = await Email
+                .From("deadmanswitchhackathon@outlook.com")
+                .To("cheyj.yeary@gmail.com", "Chey")
+                .Subject($"DMS has been activated number {time}")
+                .Body("DMS from one of our users has been invoked and you have been placed on a list to recieve files from the user.")
+                .SendAsync();
+
+            this.logger.LogInformation($"Email sent: {email.Successful}");
+
+            return email.Successful;
+
         }
 
         private static TimeSpan GetInterval(string frequency, int interval)
