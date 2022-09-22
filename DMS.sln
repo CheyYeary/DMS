@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32901.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DeadManSwitchFunction", "DeadManSwitchFunction\DeadManSwitchFunction.csproj", "{1E7D9797-F8CC-4C2E-8660-F16AF3AAF3EA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DMS", "DMS\DMS.csproj", "{8EA4FE56-11B6-4C7C-B07B-5E11FA35191C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E7D9797-F8CC-4C2E-8660-F16AF3AAF3EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E7D9797-F8CC-4C2E-8660-F16AF3AAF3EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E7D9797-F8CC-4C2E-8660-F16AF3AAF3EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E7D9797-F8CC-4C2E-8660-F16AF3AAF3EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EA4FE56-11B6-4C7C-B07B-5E11FA35191C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EA4FE56-11B6-4C7C-B07B-5E11FA35191C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EA4FE56-11B6-4C7C-B07B-5E11FA35191C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EA4FE56-11B6-4C7C-B07B-5E11FA35191C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {066FB11E-216C-4F3B-ABBA-C23A5F079F27}
+	EndGlobalSection
+EndGlobal
