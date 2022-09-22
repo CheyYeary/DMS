@@ -4,3 +4,6 @@ https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs
 
 
 RUN: func start --csharp
+
+
+when invoking the azure function set accountId = 

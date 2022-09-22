@@ -9,7 +9,7 @@ At the root of the project open terminal and run the following:
 ### Example Sign up request
 header: 
 F9168C5E-CEB2-4faa-B6BF-329BF39FA1E4
-
+frequency can be "Year", "Month", "Week", "Day"
 body:
 {
   "recurrence": {
